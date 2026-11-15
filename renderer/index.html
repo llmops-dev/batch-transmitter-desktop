@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>批量万能上链器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="#top">
+        <span class="brand-icon">B</span>
+        <span>EVM DESK<small>本地交易工作台</small></span>
+      </a>
+      <div class="nav-label">工作空间</div>
+      <nav class="sidebar-nav" aria-label="工作空间导航">
+        <a class="nav-link active" href="#top"><span class="nav-icon">▦</span><span>批量万能上链器</span></a>
+        <a class="nav-link" href="#wallets"><span class="nav-icon">↔</span><span>钱包管理</span></a>
+        <a class="nav-link" href="#transaction"><span class="nav-icon">⚙</span><span>交易设置</span></a>
+        <a class="nav-link" href="#launch"><span class="nav-icon">▷</span><span>发送任务</span></a>
+        <a class="nav-link" href="#results"><span class="nav-icon">≡</span><span>运行记录</span></a>
+      </nav>
+      <div class="sidebar-note">
+        <div><span class="local-dot"></span>在本机运行</div>
+        <p>使用你的 RPC 连接所选网络。<br />钱包在本机签名，保险库独立加密保存。</p>
+        <div class="version">Windows x64</div>
+      </div>
+    </aside>
+    <div class="workspace" id="top">
+    <header class="topbar">
+      <div class="breadcrumb">交易工具 <span>/</span><strong>批量万能上链器</strong></div>
+      <div class="topbar-right">
+        <label for="network-select">网络</label>
+        <select id="network-select" aria-label="当前网络"></select>
+        <button id="network-manage" class="plain compact">管理网络</button>
+        <span id="vault-badge" class="badge neutral">钱包未加载</span>
+      </div>
+    </header>
+    <main>
+      <div class="page-heading">
+        <div>
+          <div class="eyebrow">LOCAL SIGNING · MULTI-WALLET · EVM</div>
+          <h1>批量万能上链器</h1>
+          <p>多个钱包向指定地址发送原生币与自定义数据，支持预售、Mint 和标准 EVM 合约调用。</p>
+        </div>
+        <span class="edition">本机签名</span>
+      </div>
+      <section class="card wallet-card" id="wallets" aria-labelledby="wallets-heading">
+        <div class="section-title">
+          <div><span class="step">01</span><h2 id="wallets-heading">连接与钱包</h2></div>
+          <span id="chain-label" class="badge neutral"></span>
+        </div>
+        <div class="input-action wallet-count">
+          <span id="wallet-count">当前导入钱包数量：0</span
+          ><button id="wallet-manage" class="plain">管理钱包</button>
+        </div>
+        <p class="hint red">
+          私钥仅在本机使用。无限授权不随任务结束撤销；停止不能撤回已广播交易。
+        </p>
+      </section>
+      <div class="main-grid">
+      <section class="card" id="transaction" aria-labelledby="transaction-heading">
+        <div class="section-title">
+          <div><span class="step">02</span><h2 id="transaction-heading">交易设置</h2></div>
+          <span class="badge blue">钱包直接调用</span>
+        </div>
+        <div class="fixed-context">执行方式 <strong>本机签名 · 直接上链</strong><span>无需部署合约</span></div>
+        <div class="grid two">
+          <div>
+            <label
+              >每钱包每笔发送原生币数量
+              <span class="native-symbol">ETH</span></label
+            ><input id="value" value="0" inputmode="decimal" />
+            <p class="hint">作为每笔交易的 value，0 表示不附带原生币。</p>
+          </div>
+          <div>
+            <label>批量 ERC20 授权</label>
+            <div class="input-action">
+              <input
+                id="approve-token"
+                placeholder="请输入要授权的 Token 地址"
+              /><button id="authorize">授权</button>
+            </div>
+            <div class="approval-options">
+              <select id="approve-mode">
+                <option value="unlimited">无限授权（默认）</option>
+                <option value="amount">指定金额</option>
+                <option value="revoke">清零撤销</option></select
+              ><input
+                id="approve-amount"
+                placeholder="授权数量"
+                disabled
+              /><button id="allowance-query" class="plain">查询额度</button>
+            </div>
+            <p class="hint">授权给下方接收地址；支持需要先清零的代币。</p>
+            <p id="allowance-result" class="hint"></p>
+          </div>
+        </div>
+        <label>接收数据地址</label
+        ><input id="target" placeholder="请输入目标合约或钱包地址" />
+        <p class="hint">
+          当前网络导入的每个可用钱包直接调用这个地址。运行时修改交易参数会停止旧任务。
+        </p>
+        <label>发送数据（16 进制）</label
+        ><textarea id="calldata" rows="4" placeholder="0x"></textarea>
+        <p class="hint purple">
+          (address) 替换为 20 字节发送钱包地址；(address32) 替换为补齐 32 字节的
+          ABI 地址参数。空数据按 0x 处理。
+        </p>
+      </section>
+      <section class="card launch-card" id="launch" aria-labelledby="launch-heading">
+        <div class="section-title">
+          <div><span class="step">03</span><h2 id="launch-heading">设置发送任务</h2></div>
+        </div>
+        <nav class="tabs" aria-label="选择发起方式">
+          <button data-mode="block" class="active">区块开始</button
+          ><button data-mode="time">定时开始</button
+          ><button data-mode="probe">嗅探开始</button
+          ><button data-mode="listen">监听开始</button>
+        </nav>
+        <div id="mode-block" class="mode-panel">
+          <label>开始区块</label><input id="start-block" value="0" />
+          <p class="hint">
+            0 为立即开始；观察到区块号达到设置值后广播，不保证进入指定区块。
+          </p>
+        </div>
+        <div id="mode-time" class="mode-panel" hidden>
+          <label>发起日期与时间（本机时区）</label
+          ><input id="start-time" type="datetime-local" step="1" />
+          <p class="hint">使用完整日期，支持跨天；过去时间表示立即开始。</p>
+        </div>
+        <div id="mode-probe" class="mode-panel" hidden>
+          <p class="hint red">
+            每个钱包按自身 from、value、calldata 只读模拟，成功后开启连续发送。
+          </p>
+          <label>嗅探间隔（毫秒）</label
+          ><input id="probe-interval" value="500" />
+        </div>
+        <div id="mode-listen" class="mode-panel" hidden>
+          <label>监听 RPC（WSS）</label
+          ><input id="listen-rpc" placeholder="wss://..." />
+          <div class="grid four listen-grid">
+            <label class="toggle-label"
+              ><input
+                id="liquidity-enabled"
+                type="checkbox"
+              />监听添加流动性</label
+            >
+            <div>
+              <label>添加者地址（可空）</label
+              ><input id="lp-from" placeholder="任意地址" />
+            </div>
+            <div>
+              <label>V2 Router 地址</label
+              ><input id="lp-router" placeholder="交易所 Router" />
+            </div>
+            <div>
+              <label>Token 地址</label
+              ><input id="lp-token" placeholder="目标 Token" />
+            </div>
+          </div>
+          <label class="toggle-label"
+            ><input id="follow-gas" type="checkbox" />跟随加池交易
+            Gas（受钱包费率上限约束）</label
+          >
+          <div class="row-title">
+            <h3>自定义监听动作</h3>
+            <button id="add-rule" class="plain">＋ 添加</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>来源地址</th>
+                  <th>目标地址</th>
+                  <th>匹配方式</th>
+                  <th>动作 / 十六进制</th>
+                  <th>GasPrice（0=跟随）</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="rules"></tbody>
+            </table>
+          </div>
+          <label>延迟时间（秒）</label><input id="delay" value="0" />
+          <p class="hint">
+            节点必须支持 pending 订阅。通知需通过链、订阅标识及交易签名核对。
+          </p>
+        </div>
+        <div class="separator"></div>
+        <div class="grid two">
+          <div>
+            <label>每个钱包发送次数</label><input id="count" value="0" />
+            <p class="hint">0 为不限次数，成功和回滚后均继续发送。</p>
+          </div>
+          <div>
+            <label>发送间隔（毫秒）</label>
+            <div class="frequency">
+              <input
+                id="frequency-slider"
+                type="range"
+                min="5"
+                max="10000"
+                step="5"
+                value="1000"
+              /><input id="interval" value="1000" />
+            </div>
+            <p class="hint">
+              目标间隔。实际速度受 RPC 限流、网络和持久化性能影响。
+            </p>
+          </div>
+        </div>
+        <details>
+          <summary>高级设置：并发、预算与本地有效期</summary>
+          <div class="grid four">
+            <div>
+              <label>钱包并发</label><input id="concurrency" value="4" />
+            </div>
+            <div>
+              <label>每节点请求 / 秒</label><input id="rps" value="20" />
+            </div>
+            <div>
+              <label>原生币支付预算</label><input id="value-budget" value="0" />
+            </div>
+            <div>
+              <label>费用预算</label><input id="fee-budget" value="0" />
+            </div>
+          </div>
+          <label>本地有效期（分钟）</label><input id="duration" value="0" />
+          <p class="hint">
+            预算和有效期的 0 均表示不限制。不限制 pending 数量；Base 会额外读取
+            L1 费用并预留缓冲，其余自定义网络仅支持标准 EVM 费用。
+          </p>
+        </details>
+        <div class="actions">
+          <button id="preview" class="plain">预览交易</button
+          ><button id="start">开始发送</button
+          ><button id="stop" class="danger">停止新增发送</button>
+        </div>
+        <div id="preview-result" class="notice" hidden></div>
+      </section>
+      </div>
+      <section class="card results-card" id="results" aria-labelledby="results-heading">
+        <div class="section-title">
+          <div><span class="step">04</span><h2 id="results-heading">运行结果</h2></div>
+          <div class="section-actions">
+            <button id="refresh" class="plain">刷新</button
+            ><button id="export-records" class="plain">导出记录</button>
+          </div>
+        </div>
+        <div id="task-status" class="notice">等待设置任务</div>
+        <div id="counters" class="stats"></div>
+        <details open>
+          <summary>各钱包运行结果</summary>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>钱包</th>
+                  <th>发送次数</th>
+                  <th>RPC 接受</th>
+                  <th>未知</th>
+                  <th>待确认</th>
+                  <th>成功</th>
+                  <th>回滚</th>
+                  <th>实际费用 wei</th>
+                </tr>
+              </thead>
+              <tbody id="wallet-results"></tbody>
+            </table>
+          </div>
+        </details>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>时间 / 钱包</th>
+                <th>nonce</th>
+                <th>交易哈希</th>
+                <th>状态</th>
+                <th>费用</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="transactions"></tbody>
+          </table>
+        </div>
+        <div class="actions small">
+          <button id="records-prev" class="plain">上一页</button
+          ><span id="page-number">1</span
+          ><button id="records-next" class="plain">下一页</button>
+        </div>
+        <div id="logs" class="logs"></div>
+      </section>
+      <footer>批量万能上链器 · 独立本机程序</footer>
+    </main>
+    </div>
+    <dialog id="wallet-dialog">
+      <div class="dialog-head">
+        <h2>编辑钱包列表</h2>
+        <button data-close="wallet-dialog" class="plain close-dialog" aria-label="关闭钱包管理">×</button>
+      </div>
+      <p class="hint red">
+        支持原站 accounts
+        工作表。私钥导入后隐藏；已有钱包留空私钥可更新配置。最多 500
+        个不同钱包。
+      </p>
+      <div class="toolbar">
+        <button id="import-xlsx" class="plain">导入 XLSX</button
+        ><button id="template-xlsx" class="plain">下载模板</button
+        ><button id="export-xlsx" class="plain">导出 XLSX</button
+        ><label class="toggle-label"
+          ><input id="export-private" type="checkbox" />包含明文私钥</label
+        >
+      </div>
+      <div class="table-wrap">
+        <table class="wallet-table">
+          <thead>
+            <tr>
+              <th>钱包 / RPC</th>
+              <th>私钥（新钱包）</th>
+              <th>GasPrice</th>
+              <th>GasLimit</th>
+              <th>EIP-1559</th>
+              <th>MaxFee</th>
+              <th>MaxPriorityFee</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="wallet-rows"></tbody>
+        </table>
+      </div>
+      <button id="add-wallet" class="plain">＋ 添加钱包</button>
+      <details>
+        <summary>批量粘贴私钥</summary>
+        <textarea
+          id="paste-keys"
+          rows="4"
+          placeholder="每行一个私钥"
+        ></textarea>
+        <div class="grid two">
+          <input id="paste-rpc" placeholder="这些钱包的 RPC" /><button
+            id="apply-paste"
+            class="plain"
+          >
+            添加到列表
+          </button>
+        </div>
+      </details>
+      <div class="toolbar">
+        <input
+          id="vault-password"
+          type="password"
+          placeholder="保险库密码（至少 10 字符）"
+          autocomplete="off"
+        /><button id="vault-save" class="plain">加密保存</button
+        ><button id="vault-unlock" class="plain">解锁</button
+        ><button id="vault-backup" class="plain">加密备份</button
+        ><button id="vault-lock" class="plain">锁定</button>
+      </div>
+      <div class="actions">
+        <button id="save-wallets">确认导入 / 更新</button>
+      </div>
+    </dialog>
+    <dialog id="network-dialog">
+      <div class="dialog-head">
+        <h2>自定义 EVM 网络</h2>
+        <button data-close="network-dialog" class="plain close-dialog" aria-label="关闭网络管理">×</button>
+      </div>
+      <div class="grid two">
+        <div>
+          <label>Chain ID</label
+          ><input id="custom-chain" placeholder="正整数" />
+        </div>
+        <div><label>网络名称</label><input id="custom-name" /></div>
+        <div>
+          <label>原生币符号</label><input id="custom-symbol" value="ETH" />
+        </div>
+        <div>
+          <label>原生币精度</label><input id="custom-decimals" value="18" />
+        </div>
+        <div>
+          <label>浏览器地址</label
+          ><input id="custom-explorer" placeholder="https://..." />
+        </div>
+        <div>
+          <label>默认费率类型</label
+          ><select id="custom-fee-mode">
+            <option value="eip1559">EIP-1559</option>
+            <option value="legacy">Legacy</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">标准 EVM JSON-RPC；不支持特殊签名或非标准交易格式。</p>
+      <button id="save-network">保存网络</button>
+    </dialog>
+    <div id="toast" role="status" hidden></div>
+    <script src="app.js"></script>
+  </body>
+</html>
